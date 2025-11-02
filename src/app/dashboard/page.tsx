@@ -1,3 +1,5 @@
+'use client'
+  // ... rest of the dashboard code remains the same
 import Sidebar from '@/components/layout/Sidebar'
 
 export default function DashboardPage() {

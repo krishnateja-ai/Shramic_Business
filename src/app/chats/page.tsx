@@ -1,11 +1,41 @@
 'use client'
 
-import Sidebar from '@/components/layout/Sidebar'
-
 export default function ChatsPage() {
   return (
     <div className="flex h-screen bg-gray-50">
-      <Sidebar />
+      {/* Collapsible Sidebar */}
+      <aside className="w-16 bg-gray-800 text-white flex flex-col overflow-hidden hover:w-64 transition-all duration-300 group">
+        <div className="p-4 border-b border-gray-700 flex items-center">
+          <i className="fas fa-store w-8 h-8 text-2xl"></i>
+          <h1 className="text-2xl font-bold ml-2 hidden group-hover:block">Seller</h1>
+        </div>
+        <nav className="flex-1 p-2 space-y-2">
+          <a href="/dashboard" className="flex items-center p-3 rounded-lg hover:bg-gray-600 transition-colors">
+            <i className="fas fa-tachometer-alt w-6 h-6 mr-3"></i>
+            <span className="hidden group-hover:block">Overview</span>
+          </a>
+          <a href="/chats" className="flex items-center p-3 rounded-lg bg-gray-700 transition-colors">
+            <i className="fas fa-comments w-6 h-6 mr-3"></i>
+            <span className="hidden group-hover:block">Chats</span>
+          </a>
+          <a href="/quotations" className="flex items-center p-3 rounded-lg hover:bg-gray-600 transition-colors">
+            <i className="fas fa-file-invoice-dollar w-6 h-6 mr-3"></i>
+            <span className="hidden group-hover:block">Quotations</span>
+          </a>
+          <a href="/profile" className="flex items-center p-3 rounded-lg hover:bg-gray-600 transition-colors">
+            <i className="fas fa-user w-6 h-6 mr-3"></i>
+            <span className="hidden group-hover:block">Profile</span>
+          </a>
+        </nav>
+        <div className="p-4 border-t border-gray-700">
+          <button className="w-full flex items-center p-3 rounded-lg text-red-400 hover:bg-red-500 hover:text-white transition-colors">
+            <i className="fas fa-sign-out-alt w-6 h-6 mr-3"></i>
+            <span className="hidden group-hover:block">Logout</span>
+          </button>
+        </div>
+      </aside>
+
+      {/* Main Content */}
       <main className="flex-1 p-8 overflow-y-auto">
         <header className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold text-gray-800">Customer Conversations</h1>

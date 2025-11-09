@@ -8,6 +8,9 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        inter: ['Inter', 'sans-serif'],
+      },
       animation: {
         fadeIn: 'fadeIn 0.5s ease-in-out',
       },

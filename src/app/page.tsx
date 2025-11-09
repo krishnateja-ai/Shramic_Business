@@ -15,7 +15,6 @@ export default function HomePage() {
   }
 
   const handleVerifyOtp = () => {
-    // OTP verification logic will be implemented later
     window.location.href = '/dashboard'
   }
 
@@ -27,21 +26,15 @@ export default function HomePage() {
   return (
     <div className="bg-gray-100 flex items-center justify-center min-h-screen p-4">
       <div className="w-full max-w-md bg-white p-8 rounded-xl shadow-lg">
-        {/* Header */}
         <div className="text-center">
           <i className="fas fa-store-alt text-4xl text-blue-600 mb-3"></i>
           <h1 className="text-3xl font-bold text-gray-900">Seller Portal</h1>
           <p className="text-gray-600 mt-2">Login or Register to continue.</p>
         </div>
 
-        {/* Message Area */}
-        <div id="messageArea" className="hidden p-3 mt-6 text-sm rounded-lg text-center" role="alert"></div>
-        <div id="recaptcha-container" className="my-4"></div>
-
-        {/* Auth Form */}
-        <form className="mt-6">
+        <div className="mt-6">
           {/* Mobile Number Step */}
-          <div className={`form-step ${activeStep === 'mobile' ? 'active' : 'hidden'}`}>
+          <div className={activeStep === 'mobile' ? 'block' : 'hidden'}>
             <label htmlFor="mobileNumber" className="block mb-2 text-sm font-medium text-gray-700">
               Mobile Number
             </label>
@@ -61,7 +54,6 @@ export default function HomePage() {
               />
             </div>
             <button
-              type="button"
               onClick={handleSendOtp}
               disabled={mobileNumber.length !== 10}
               className="w-full mt-6 py-3 px-5 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 disabled:bg-blue-300 transition-all"
@@ -71,7 +63,7 @@ export default function HomePage() {
           </div>
 
           {/* OTP Step */}
-          <div className={`form-step ${activeStep === 'otp' ? 'active' : 'hidden'}`}>
+          <div className={activeStep === 'otp' ? 'block' : 'hidden'}>
             <p className="text-center text-gray-600">
               Enter the code sent to <strong className="text-gray-800">{sentToNumber}</strong>
             </p>
@@ -80,13 +72,12 @@ export default function HomePage() {
                 <input
                   key={index}
                   type="text"
-                  className="otp-input w-12 h-12 text-center text-lg border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                  className="w-12 h-12 text-center text-lg border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                   maxLength={1}
                 />
               ))}
             </div>
             <button
-              type="button"
               onClick={handleVerifyOtp}
               className="w-full mt-4 py-3 px-5 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-all"
             >
@@ -94,24 +85,21 @@ export default function HomePage() {
             </button>
             <div className="text-center mt-4">
               <button
-                type="button"
-                className="text-sm text-blue-600 hover:underline"
                 onClick={handleChangeNumber}
+                className="text-sm text-blue-600 hover:underline"
               >
                 Change Number
               </button>
             </div>
           </div>
-        </form>
+        </div>
 
-        {/* Divider */}
         <div className="relative flex py-5 items-center">
           <div className="flex-grow border-t border-gray-300"></div>
           <span className="flex-shrink mx-4 text-gray-400 text-sm">New to the portal?</span>
           <div className="flex-grow border-t border-gray-300"></div>
         </div>
 
-        {/* Register Button */}
         <a
           href="/register"
           className="w-full block text-center py-3 px-5 bg-green-500 text-white font-semibold rounded-lg hover:bg-green-600 focus:outline-none focus:ring-4 focus:ring-green-300 transition-all"
@@ -119,26 +107,6 @@ export default function HomePage() {
           Sign Up / Register
         </a>
       </div>
-
-      <style jsx>{`
-        .form-step {
-          display: none;
-        }
-        .form-step.active {
-          display: block;
-          animation: fadeIn 0.5s ease-in-out;
-        }
-        @keyframes fadeIn {
-          from {
-            opacity: 0;
-            transform: translateY(10px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-      `}</style>
     </div>
   )
 }

@@ -109,7 +109,7 @@ MIT License - see LICENSE file for details
 
 
 **Repository**: https://github.com/krishnateja-ai/Shramic_Business
-**Email**: krishnateja.aiml@gmail.com
+ **Email**: krishnateja.aiml@gmail.com
 
 
 ### For Business:

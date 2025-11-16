@@ -107,9 +107,79 @@ export default function RegisterPage() {
 
   useEffect(() => {
     if (typeof window !== 'undefined' && auth) {
-      const unsubscribe = onAuthStateChanged(auth, (user) => {
+      const unsubscribe = onAuthStateChanged(auth, async (user) => {
         if (user && user.phoneNumber) {
           setVerifiedPhone(user.phoneNumber)
+          
+          // Check if user is already registered
+          try {
+            const storeDocRef = doc(db, 'stores', user.uid)
+            const storeDoc = await getDoc(storeDocRef)
+            
+            if (storeDoc.exists()) {
+              const storeData = storeDoc.data()
+              const status = storeData.status
+              
+              // If registration is complete and approved, redirect to dashboard
+              if (status === 'approved' || status === 'active') {
+                showMessage('success', 'Welcome back! Redirecting to dashboard...')
+                setTimeout(() => {
+                  window.location.href = '/dashboard'
+                }, 1500)
+                return
+              }
+              
+              // If pending review, show appropriate message
+              if (status === 'pending_review') {
+                showMessage('info', 'Your application is under review. Please wait for approval.')
+                setTimeout(() => {
+                  await signOut(auth)
+                  window.location.href = '/login'
+                }, 3000)
+                return
+              }
+              
+              // If rejected or suspended
+              if (status === 'rejected' || status === 'suspended') {
+                showMessage('error', `Your account is ${status}. Please contact support.`)
+                setTimeout(() => {
+                  await signOut(auth)
+                  window.location.href = '/login'
+                }, 3000)
+                return
+              }
+              
+              // If registration incomplete, restore data and continue
+              if (storeData.profileCompleted && storeData.profileCompleted < 100) {
+                showMessage('info', 'Welcome back! Continue your registration.')
+                // Restore form data from Firestore
+                setFormData({
+                  businessName: storeData.businessName || '',
+                  ownerName: storeData.ownerName || '',
+                  businessEmail: storeData.businessEmail || '',
+                  businessType: storeData.businessType || '',
+                  shopCategory: storeData.shopCategory || '',
+                  numEmployees: storeData.numEmployees?.toString() || '',
+                  numBranches: storeData.numBranches?.toString() || '1',
+                  gstNumber: storeData.gstNumber || '',
+                  experienceYears: storeData.experienceYears?.toString() || '',
+                  address: storeData.address || '',
+                  city: storeData.city || '',
+                  state: storeData.state || '',
+                  pincode: storeData.pincode || '',
+                  agreeTerms: false,
+                  verifyInformation: false,
+                  agreeMarketing: false
+                })
+                // Skip to business info step if phone is verified
+                if (user.phoneNumber) {
+                  setCurrentStep(3)
+                }
+              }
+            }
+          } catch (error) {
+            console.error('Error checking registration status:', error)
+          }
         }
       })
       return () => unsubscribe()
@@ -404,9 +474,16 @@ export default function RegisterPage() {
         {/* Alert Message */}
         {message.text && (
           <div className={`p-4 rounded-lg mb-6 ${
-            message.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+            message.type === 'success' ? 'bg-green-100 text-green-800' : 
+            message.type === 'info' ? 'bg-blue-100 text-blue-800' :
+            'bg-red-100 text-red-800'
           }`} role="alert">
-            {message.text}
+            <div className="flex items-center">
+              {message.type === 'success' && <i className="fas fa-check-circle mr-2"></i>}
+              {message.type === 'error' && <i className="fas fa-exclamation-circle mr-2"></i>}
+              {message.type === 'info' && <i className="fas fa-info-circle mr-2"></i>}
+              <span>{message.text}</span>
+            </div>
           </div>
         )}
 

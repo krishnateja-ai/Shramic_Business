@@ -58,14 +58,20 @@ export default function DashboardPage() {
               const data = storeDoc.data() as StoreData
               const status = data.status
 
-              // Check if account status is valid
-              if (['rejected', 'suspended', 'pending_review'].includes(status || '')) {
+              // Allow approved/active users regardless of profile completion
+              if (status === 'approved' || status === 'active') {
+                setStoreData(data)
+                calculateProfileCompletion(data)
+                setLoading(false)
+              } else if (status === 'pending_review') {
+                // Pending users cannot access dashboard
+                alert('Your application is under review. Please wait for approval.')
+                await signOut(auth)
+                router.push('/login')
+              } else {
+                // Rejected/suspended users cannot access
                 throw new Error('Invalid account status.')
               }
-
-              setStoreData(data)
-              calculateProfileCompletion(data)
-              setLoading(false)
             } else {
               throw new Error('Store profile not found.')
             }

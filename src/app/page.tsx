@@ -167,15 +167,22 @@ export default function LoginPage() {
         const storeDoc = await getDoc(storeDocRef)
         
         if (storeDoc.exists()) {
-          const status = storeDoc.data().status
+          const storeData = storeDoc.data()
+          const status = storeData.status
+          const profileCompleted = storeData.profileCompleted || 0
           
           if (status === 'approved' || status === 'active') {
-            showMessage('success', 'Login successful! Redirecting...')
+            // Allow access regardless of profile completion
+            if (profileCompleted < 100) {
+              showMessage('success', 'Login successful! Please complete your profile.')
+            } else {
+              showMessage('success', 'Login successful! Redirecting...')
+            }
             setTimeout(() => {
               router.push('/dashboard')
             }, 1000)
           } else if (status === 'pending_review') {
-            showMessage('info', 'Your application is under review. Please wait for approval.')
+            showMessage('info', 'Your application is under review. You can access your dashboard once approved.')
           } else if (status === 'rejected' || status === 'suspended') {
             showMessage('error', `Your account is ${status}. Please contact support.`)
           }

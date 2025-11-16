@@ -7,7 +7,8 @@ import {
   RecaptchaVerifier, 
   signInWithPhoneNumber,
   ConfirmationResult,
-  onAuthStateChanged
+  onAuthStateChanged,
+  signOut
 } from 'firebase/auth'
 import { 
   getFirestore, 
@@ -17,6 +18,7 @@ import {
   query, 
   where, 
   getDocs,
+  getDoc,
   serverTimestamp 
 } from 'firebase/firestore'
 import { 
@@ -132,7 +134,7 @@ export default function RegisterPage() {
               // If pending review, show appropriate message
               if (status === 'pending_review') {
                 showMessage('info', 'Your application is under review. Please wait for approval.')
-                setTimeout(() => {
+                setTimeout(async () => {
                   await signOut(auth)
                   window.location.href = '/login'
                 }, 3000)
@@ -142,7 +144,7 @@ export default function RegisterPage() {
               // If rejected or suspended
               if (status === 'rejected' || status === 'suspended') {
                 showMessage('error', `Your account is ${status}. Please contact support.`)
-                setTimeout(() => {
+                setTimeout(async () => {
                   await signOut(auth)
                   window.location.href = '/login'
                 }, 3000)

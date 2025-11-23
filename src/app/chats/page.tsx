@@ -45,6 +45,7 @@ interface Message {
 interface User {
   id: string
   name: string
+  email?: string
   type: 'store' | 'customer'
 }
 
@@ -77,6 +78,7 @@ export default function ChatsPage() {
   const [newChatRecipient, setNewChatRecipient] = useState('')
   const [availableUsers, setAvailableUsers] = useState<User[]>([])
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [activeTab, setActiveTab] = useState<'stores' | 'customers'>('customers')
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const unsubscribeChatsRef = useRef<Unsubscribe | null>(null)
   const unsubscribeMessagesRef = useRef<Unsubscribe | null>(null)
@@ -168,10 +170,11 @@ export default function ChatsPage() {
   // Load available users/stores for new chat
   const loadAvailableUsers = async () => {
     try {
-      // Load other stores
+      const users: User[] = []
+      
+      // Load other stores (vendors)
       const storesQuery = query(collection(db, 'stores'), where('status', '==', 'active'))
       const storesSnapshot = await getDocs(storesQuery)
-      const users: User[] = []
       
       storesSnapshot.forEach((docSnap) => {
         if (docSnap.id !== currentStoreId) {
@@ -179,9 +182,24 @@ export default function ChatsPage() {
           users.push({
             id: docSnap.id,
             name: data.storeName || data.ownerName || 'Store',
+            email: data.email,
             type: 'store'
           })
         }
+      })
+
+      // Load customers (users collection)
+      const customersQuery = query(collection(db, 'users'))
+      const customersSnapshot = await getDocs(customersQuery)
+      
+      customersSnapshot.forEach((docSnap) => {
+        const data = docSnap.data()
+        users.push({
+          id: docSnap.id,
+          name: data.name || data.displayName || 'Customer',
+          email: data.email,
+          type: 'customer'
+        })
       })
       
       setAvailableUsers(users)
@@ -192,6 +210,7 @@ export default function ChatsPage() {
 
   const openNewChatModal = () => {
     setShowNewChatModal(true)
+    setNewChatRecipient('')
     loadAvailableUsers()
   }
 
@@ -314,6 +333,13 @@ export default function ChatsPage() {
     (chat.customerName || 'Customer').toLowerCase().includes(searchTerm.toLowerCase())
   )
 
+  const filteredUsers = availableUsers.filter(user => {
+    const matchesSearch = user.name.toLowerCase().includes(newChatRecipient.toLowerCase()) ||
+                         (user.email && user.email.toLowerCase().includes(newChatRecipient.toLowerCase()))
+    const matchesTab = activeTab === 'customers' ? user.type === 'customer' : user.type === 'store'
+    return matchesSearch && matchesTab
+  })
+
   if (isLoading) {
     return (
       <div className="fixed inset-0 bg-white z-50 flex flex-col items-center justify-center">
@@ -417,7 +443,11 @@ export default function ChatsPage() {
             </div>
             <ul className="overflow-y-auto flex-1">
               {filteredChats.length === 0 ? (
-                <p className="text-center text-gray-500 p-4">No conversations yet.</p>
+                <div className="text-center text-gray-500 p-8">
+                  <i className="fas fa-inbox text-4xl mb-3 text-gray-300"></i>
+                  <p className="font-medium">No conversations yet.</p>
+                  <p className="text-sm mt-2">Click "New Chat" to start a conversation</p>
+                </div>
               ) : (
                 filteredChats.map((chat) => {
                   const unreadCount = chat.unreadByStoreCount || 0
@@ -467,6 +497,7 @@ export default function ChatsPage() {
               <div className="flex flex-col items-center justify-center h-full text-gray-400 p-4">
                 <i className="fas fa-comments text-5xl lg:text-6xl mb-4"></i>
                 <p className="text-lg lg:text-xl text-center">Select a conversation to begin</p>
+                <p className="text-sm text-gray-400 mt-2">or click "New Chat" to start one</p>
               </div>
             ) : (
               <div className="flex-1 flex flex-col h-full">
@@ -482,23 +513,30 @@ export default function ChatsPage() {
                 </div>
                 
                 <div className="flex-1 p-4 lg:p-6 overflow-y-auto bg-gray-100">
-                  {messages.map((message) => {
-                    const isStore = message.sender === 'store'
-                    
-                    return (
-                      <div 
-                        key={message.id} 
-                        className={`flex mb-3 lg:mb-4 ${isStore ? 'justify-end' : 'justify-start'}`}
-                      >
-                        <div className={`max-w-[85%] lg:max-w-md px-3 lg:px-4 py-2 lg:py-3 rounded-xl ${isStore ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'}`}>
-                          <p className="text-sm lg:text-base break-words">{message.text}</p>
-                          <span className={`text-xs block mt-1 text-right ${isStore ? 'opacity-75' : 'text-gray-500'}`}>
-                            {formatTimestamp(message.timestamp)}
-                          </span>
+                  {messages.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-full text-gray-400">
+                      <i className="fas fa-comment-dots text-4xl mb-3"></i>
+                      <p className="text-center">No messages yet. Start the conversation!</p>
+                    </div>
+                  ) : (
+                    messages.map((message) => {
+                      const isStore = message.sender === 'store'
+                      
+                      return (
+                        <div 
+                          key={message.id} 
+                          className={`flex mb-3 lg:mb-4 ${isStore ? 'justify-end' : 'justify-start'}`}
+                        >
+                          <div className={`max-w-[85%] lg:max-w-md px-3 lg:px-4 py-2 lg:py-3 rounded-xl ${isStore ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'}`}>
+                            <p className="text-sm lg:text-base break-words">{message.text}</p>
+                            <span className={`text-xs block mt-1 text-right ${isStore ? 'opacity-75' : 'text-gray-500'}`}>
+                              {formatTimestamp(message.timestamp)}
+                            </span>
+                          </div>
                         </div>
-                      </div>
-                    )
-                  })}
+                      )
+                    })
+                  )}
                   <div ref={messagesEndRef} />
                 </div>
                 
@@ -531,56 +569,91 @@ export default function ChatsPage() {
       {showNewChatModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[80vh] flex flex-col">
-            <div className="p-4 lg:p-6 border-b flex justify-between items-center">
-              <h2 className="text-xl lg:text-2xl font-bold text-gray-800">Start New Conversation</h2>
-              <button 
-                onClick={() => {
-                  setShowNewChatModal(false)
-                  setNewChatRecipient('')
-                }}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <i className="fas fa-times text-xl"></i>
-              </button>
-            </div>
-            
-            <div className="p-4 lg:p-6">
+            <div className="p-4 lg:p-6 border-b">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl lg:text-2xl font-bold text-gray-800">Start New Conversation</h2>
+                <button 
+                  onClick={() => {
+                    setShowNewChatModal(false)
+                    setNewChatRecipient('')
+                  }}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <i className="fas fa-times text-xl"></i>
+                </button>
+              </div>
+
+              {/* Tabs */}
+              <div className="flex gap-2 mb-4">
+                <button
+                  onClick={() => setActiveTab('customers')}
+                  className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${
+                    activeTab === 'customers'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  <i className="fas fa-users mr-2"></i>
+                  Customers
+                </button>
+                <button
+                  onClick={() => setActiveTab('stores')}
+                  className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${
+                    activeTab === 'stores'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  <i className="fas fa-store mr-2"></i>
+                  Vendors
+                </button>
+              </div>
+
+              {/* Search Input */}
               <input
                 type="text"
-                placeholder="Search for vendors or customers..."
+                placeholder={`Search for ${activeTab === 'customers' ? 'customers' : 'vendors'}...`}
                 value={newChatRecipient}
                 onChange={(e) => setNewChatRecipient(e.target.value)}
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none mb-4"
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
               />
             </div>
 
             <div className="flex-1 overflow-y-auto px-4 lg:px-6 pb-4 lg:pb-6">
-              <h3 className="text-sm font-semibold text-gray-600 mb-3">Available Contacts</h3>
-              {availableUsers.filter(user => 
-                user.name.toLowerCase().includes(newChatRecipient.toLowerCase())
-              ).length === 0 ? (
-                <p className="text-center text-gray-500 py-8">No contacts found</p>
+              <h3 className="text-sm font-semibold text-gray-600 mb-3">
+                Available {activeTab === 'customers' ? 'Customers' : 'Vendors'}
+              </h3>
+              {filteredUsers.length === 0 ? (
+                <div className="text-center text-gray-500 py-8">
+                  <i className={`fas ${activeTab === 'customers' ? 'fa-users' : 'fa-store'} text-4xl mb-3 text-gray-300`}></i>
+                  <p className="font-medium">No {activeTab} found</p>
+                  <p className="text-sm mt-2">Try a different search term</p>
+                </div>
               ) : (
                 <ul className="space-y-2">
-                  {availableUsers
-                    .filter(user => user.name.toLowerCase().includes(newChatRecipient.toLowerCase()))
-                    .map((user) => (
-                      <li 
-                        key={user.id}
-                        onClick={() => createNewChat(user.id, user.name)}
-                        className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-blue-50 cursor-pointer transition-colors"
-                      >
-                        <img 
-                          src={`https://ui-avatars.com/api/?name=${user.name}&background=random`} 
-                          alt={user.name} 
-                          className="w-10 h-10 rounded-full mr-3"
-                        />
-                        <div>
-                          <h4 className="font-semibold text-gray-800">{user.name}</h4>
-                          <p className="text-xs text-gray-500 capitalize">{user.type}</p>
-                        </div>
-                      </li>
-                    ))}
+                  {filteredUsers.map((user) => (
+                    <li 
+                      key={user.id}
+                      onClick={() => createNewChat(user.id, user.name)}
+                      className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-blue-50 cursor-pointer transition-colors"
+                    >
+                      <img 
+                        src={`https://ui-avatars.com/api/?name=${user.name}&background=random`} 
+                        alt={user.name} 
+                        className="w-10 h-10 rounded-full mr-3 flex-shrink-0"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-semibold text-gray-800 truncate">{user.name}</h4>
+                        {user.email && (
+                          <p className="text-xs text-gray-500 truncate">{user.email}</p>
+                        )}
+                        <p className="text-xs text-blue-600 capitalize mt-1">
+                          <i className={`fas ${user.type === 'customer' ? 'fa-user' : 'fa-store'} mr-1`}></i>
+                          {user.type}
+                        </p>
+                      </div>
+                    </li>
+                  ))}
                 </ul>
               )}
             </div>

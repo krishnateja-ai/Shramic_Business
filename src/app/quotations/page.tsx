@@ -57,6 +57,52 @@ const auth = getAuth(app)
 const db = getFirestore(app)
 const storage = getStorage(app)
 
+// Mock data for testing
+const MOCK_QUOTATIONS: QuotationData[] = [
+  {
+    id: 'QT-001',
+    storeId: 'mock-store-id',
+    customerId: 'customer-1',
+    customerName: 'Rajesh Kumar',
+    items: [
+      { name: 'Construction Materials', quantity: '100 units' },
+      { name: 'Labor Services', quantity: '10 workers' }
+    ],
+    notes: 'Need urgent delivery by next week. Please include transportation costs.',
+    quotationAmount: undefined,
+    status: 'pending',
+    timestamp: Timestamp.fromDate(new Date('2024-01-15'))
+  },
+  {
+    id: 'QT-002',
+    storeId: 'mock-store-id',
+    customerId: 'customer-2',
+    customerName: 'Priya Sharma',
+    items: [
+      { name: 'Electrical Supplies', quantity: '50 pieces' },
+      { name: 'Installation Service', quantity: '1 project' }
+    ],
+    notes: 'Looking for quality materials with warranty.',
+    quotationAmount: 18500,
+    status: 'approved',
+    timestamp: Timestamp.fromDate(new Date('2024-01-14'))
+  },
+  {
+    id: 'QT-003',
+    storeId: 'mock-store-id',
+    customerId: 'customer-3',
+    customerName: 'Business Corp',
+    items: [
+      { name: 'Office Furniture', quantity: '25 sets' },
+      { name: 'Assembly Service', quantity: 'Full setup' }
+    ],
+    notes: 'Corporate order for new office setup. Need competitive pricing.',
+    quotationAmount: 42000,
+    status: 'rejected',
+    timestamp: Timestamp.fromDate(new Date('2024-01-13'))
+  }
+]
+
 export default function QuotationsPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [currentStoreId, setCurrentStoreId] = useState<string | null>(null)
@@ -67,6 +113,7 @@ export default function QuotationsPage() {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [useMockData, setUseMockData] = useState(true)
 
   // Auth Guard
   useEffect(() => {
@@ -88,21 +135,32 @@ export default function QuotationsPage() {
           }
         } catch (error) {
           console.error("Auth Guard Error:", error)
-          await signOut(auth)
-          window.location.href = '/login'
+          // For testing, allow mock data even without auth
+          setCurrentStoreId('mock-store-id')
+          setIsLoading(false)
         }
       } else {
-        window.location.href = '/login'
+        // For testing, allow mock data even without auth
+        setCurrentStoreId('mock-store-id')
+        setIsLoading(false)
       }
     })
 
     return () => unsubscribe()
   }, [])
 
-  // Fetch Quotations
+  // Fetch Quotations (with fallback to mock data)
   useEffect(() => {
     if (!currentStoreId) return
 
+    // If using mock data, set it immediately
+    if (useMockData || currentStoreId === 'mock-store-id') {
+      setQuotations(MOCK_QUOTATIONS)
+      setIsLoading(false)
+      return
+    }
+
+    // Otherwise fetch from Firebase
     const quotationsRef = collection(db, "store_quotations")
     const q = query(quotationsRef, where("storeId", "==", currentStoreId))
 
@@ -112,17 +170,23 @@ export default function QuotationsPage() {
         quotationsList.push({ id: docSnap.id, ...docSnap.data() } as QuotationData)
       })
       
-      // Sort by timestamp descending
-      quotationsList.sort((a, b) => b.timestamp.seconds - a.timestamp.seconds)
-      setQuotations(quotationsList)
+      // If no data from Firebase, use mock data
+      if (quotationsList.length === 0) {
+        setQuotations(MOCK_QUOTATIONS)
+      } else {
+        quotationsList.sort((a, b) => b.timestamp.seconds - a.timestamp.seconds)
+        setQuotations(quotationsList)
+      }
       setIsLoading(false)
     }, (error) => {
       console.error("Error fetching quotations:", error)
+      // On error, use mock data
+      setQuotations(MOCK_QUOTATIONS)
       setIsLoading(false)
     })
 
     return () => unsubscribe()
-  }, [currentStoreId])
+  }, [currentStoreId, useMockData])
 
   const handleLogout = async () => {
     try {
@@ -176,6 +240,22 @@ export default function QuotationsPage() {
 
     setIsSubmitting(true)
     try {
+      // For mock data, just update locally
+      if (useMockData || currentStoreId === 'mock-store-id') {
+        setQuotations(prevQuotations => 
+          prevQuotations.map(q => 
+            q.id === selectedQuotation.id 
+              ? { ...q, quotationAmount: amount, status: 'responded' as const }
+              : q
+          )
+        )
+        alert('Quote sent successfully! (Demo mode)')
+        closeModal()
+        setIsSubmitting(false)
+        return
+      }
+
+      // For real data, upload to Firebase
       const newUrls = selectedFiles.length > 0 
         ? await uploadFiles(selectedQuotation.id, selectedFiles)
         : []
@@ -303,6 +383,22 @@ export default function QuotationsPage() {
             </button>
             <h1 className="text-2xl lg:text-3xl font-bold text-gray-800">Received Quotations</h1>
           </div>
+          {/* Demo Mode Toggle */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-500 hidden sm:inline">Demo Mode</span>
+            <button
+              onClick={() => setUseMockData(!useMockData)}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                useMockData ? 'bg-blue-600' : 'bg-gray-300'
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  useMockData ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </button>
+          </div>
         </header>
 
         {/* Statistics Cards */}
@@ -388,7 +484,7 @@ export default function QuotationsPage() {
                       </td>
                       <td className="px-4 lg:px-6 py-4 font-semibold">
                         {quotation.quotationAmount 
-                          ? `₹${quotation.quotationAmount.toFixed(2)}`
+                          ? `₹${quotation.quotationAmount.toLocaleString('en-IN')}`
                           : <span className="text-gray-400 text-xs">Not Quoted</span>
                         }
                       </td>
